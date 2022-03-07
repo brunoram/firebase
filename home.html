@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Movies Room</title>
+  <link rel="icon" type="image/x-icon" href="/img/logo.jpg">
+  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+</head>
+
+<body>
+  <nav class='nav'>
+    <img id="logo" src="/img/logo.jpg">
+    <div id="right-nav">
+      <p id="username"></p>
+      <p id="email"></p>
+      <input id="wishlist" type="image" src="/img/wishlist.png" />
+      <button id="logout">Logout</button>
+    </div>
+  </nav>
+  <section>
+    <div id="myProgress">
+      <div id="myBar">
+      </div>
+      <h2>Loading...</h2>
+    </div>
+    <input type="text" id="myInput" class="hidden" placeholder="Search">
+    <table id="myTable" class="hidden">
+      <tr class="header">
+        <th style="width:25%;">Genre</th>
+        <th style="width:10%;">Id</th>
+        <th style="width:50%;">Title</th>
+        <th style="width:10%;">Year</th>
+        <th style="width:5%;">Wishlist</th>
+      </tr>
+    </table>
+  </section>
+
+</body>
+
+</html>
+<script src="https://www.gstatic.com/firebasejs/8.1.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.1.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.1.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.1.1/firebase-firestore.js"></script>
+<script>
+
+  var firebaseConfig = {
+    apiKey: "AIzaSyBmjnR5hVchZEQ75DrJsI0KtrG-ianI_a4",
+    authDomain: "movies-24f1b.firebaseapp.com",
+    projectId: "movies-24f1b",
+    storageBucket: "movies-24f1b.appspot.com",
+    messagingSenderId: "1029670039620",
+    appId: "1:1029670039620:web:f3b9a267a6ffaf36f80c11"
+  };
+  firebase.initializeApp(firebaseConfig);
+
+
+  checkAuthState(); //this function check if the user is authenticated
+
+  function checkAuthState() {
+    firebase.auth().onAuthStateChanged(function (user) {
+      if (user) {
+        document.querySelector("#logout").addEventListener('click', logoutUser); //logout button
+        document.querySelector("#username").textContent = "Hello, " + user.displayName;
+        document.querySelector("#email").textContent = user.email;
+        document.querySelector("#wishlist").addEventListener('click', wishlist); //wishlist button
+        document.querySelector("#logo").addEventListener('click', function(){ //logo button to return to home
+        location.href = "/home.html"
+    });
+        progressBar(); //loading...
+        searchbar = document.querySelector('#myInput');
+        searchbar.addEventListener("keyup", search); //search in table function
+
+
+        var query = firebase.database().ref("movies-list").orderByKey();
+        query.once("value")
+          .then(function (snapshot) {
+            snapshot.forEach(function (childSnapshot) {
+              var key = childSnapshot.key;
+              var childData = childSnapshot.val();
+              tableBulding(key, childData); //building table row by row with realtime db data
+            });
+            setTimeout(removeProgressBar, 900);
+
+          });
+      } else {
+        location.href = 'index.html';
+      }
+    })
+  }
+
+  function logoutUser() {
+
+    firebase.auth().signOut().then(() => {
+      location.href = 'index.html';
+    }).catch(e => {
+      console.log(e)
+    })
+  }
+
+  function progressBar() { //simple loading bar
+    var i = 0;
+    function move() {
+      if (i == 0) {
+        i = 1;
+        var elem = document.getElementById("myBar");
+        var width = 5;
+        var id = setInterval(frame, 500);
+        function frame() {
+          width = width + 25;
+          elem.style.width = width + "%";
+        }
+      }
+    }
+  }
+
+
+  function removeProgressBar() {
+    var elem = document.getElementById("myProgress");
+    elem.remove();
+    document.querySelector('#myTable').classList.remove('hidden');
+    document.querySelector('.header').classList.remove('hidden');
+    document.querySelector('#myInput').classList.remove('hidden');
+  }
+
+  function tableBulding(key, row) {
+    //creating a table row
+    tr = document.createElement('tr');
+    genre = document.createElement('td');
+    id = document.createElement('td');
+    title = document.createElement('td');
+    year = document.createElement('td');
+    wish = document.createElement('td');
+
+
+    genre.textContent = row.genre;
+    id.textContent = row.id;
+    tr.setAttribute('id', row.id); //inserting an id = to the id of the film 
+    title.textContent = row.title;
+    year.textContent = row.year;
+    wish.innerHTML = '<img src="/img/wishlist.png" alt="" border="3" height="100" width="100" />'
+    wish.classList.add('heart');
+    wish.addEventListener('click', addToWishlist);
+
+    tr.appendChild(genre);
+    tr.appendChild(id);
+    tr.appendChild(title);
+    tr.appendChild(year);
+    tr.appendChild(wish);
+    table = document.querySelector('#myTable');
+    table.appendChild(tr);
+
+    const email = document.querySelector("#email").textContent;
+    firebase
+        .firestore()
+        .collection(email) //selecting the wishlist collection of the user by its email which is unique
+          .get().then((querySnapshot) => {
+            querySnapshot.forEach((doc) => {            
+             if(doc.data().id == row.id){
+               line = document.getElementById(row.id.toString());
+               line.classList.add('hidden'); //hide the row with the same id of the films present  in the firestore db wishlist
+             }
+             
+            });
+          });
+  }
+
+  function wishlist() { //button wishlist 
+    window.location.href = "/wish.html"
+  }
+
+  function addToWishlist(event) {
+    const email = document.querySelector("#email").textContent
+    let docRef = firebase.firestore().collection("users").doc(email); //take documents of the user by its email which is unique
+    var heart = event.currentTarget;
+    docRef.get().then((doc) => {
+
+      //selecting the cells of the row where the heart was clicked
+      genre_ = heart.parentNode.firstChild.textContent;
+      id_ = heart.parentNode.firstChild.nextSibling.textContent;
+      title_ = heart.parentNode.firstChild.nextSibling.nextSibling.textContent;
+      year_ = heart.parentNode.lastChild.previousSibling.textContent;
+
+      firebase
+        .firestore()
+        .collection(email)
+        .add({  //adding to the database the data of the row
+          genre: genre_,
+          id: id_,
+          title: title_,
+          year: year_
+        });
+      row = heart.parentNode.classList.add('hidden'); //hide the row where the heart was clicked
+
+    }).catch((error) => {
+      console.log("Error getting document:", error);
+    });
+  }
+
+  function search(event) { //simple table searching, the filtering indexes are all the columns values
+
+    let input, filter, table, tr, td;
+    input = document.getElementById("myInput");
+    filter = input.value.toUpperCase();
+    table = document.getElementById("myTable");
+    tr = table.getElementsByTagName("tr");
+
+    for (let i = 0; i < tr.length; i++) {
+      let found = false;
+      td = tr[i].getElementsByTagName("td");
+      for (j = 0; j < td.length; j++) {
+        if (td[j].textContent.toUpperCase().indexOf(filter) > -1) {
+
+          found = true;
+        }
+      }
+      if (found) {
+        tr[i].style.display = "";
+      } else {
+        tr[i].style.display = "none";
+      }
+    }
+  }
+
+</script>

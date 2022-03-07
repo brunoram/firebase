@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Movies Room</title>
+  <link rel="icon" type="image/x-icon" href="/img/logo.jpg">
+  <link rel="stylesheet" href="index.css">
+  <meta charset="UTF-8">
+</head>
+
+<body>
+  <div id="center">
+    <h1>Movies Room</h1>
+    <img src="/img/logo.jpg">
+
+  </div>
+  <div id="log">
+    <h2>Login</h2>
+    <button id="login" class="google-btn">
+      <div class="google-icon-wrapper">
+        <img class="google-icon" src="/img/google.svg" />
+      </div>
+      <p class="btn-text"><b>Sign in with Google</b></p>
+    </button>
+  </div>
+</body>
+
+<script src="https://www.gstatic.com/firebasejs/8.1.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.1.1/firebase-auth.js"></script>
+<script>
+
+  var firebaseConfig = {
+    apiKey: "AIzaSyBmjnR5hVchZEQ75DrJsI0KtrG-ianI_a4",
+    authDomain: "movies-24f1b.firebaseapp.com",
+    projectId: "movies-24f1b",
+    storageBucket: "movies-24f1b.appspot.com",
+    messagingSenderId: "1029670039620",
+    appId: "1:1029670039620:web:f3b9a267a6ffaf36f80c11"
+  };
+ 
+  firebase.initializeApp(firebaseConfig);
+  window.addEventListener('DOMContentLoaded', checkAuthState);
+  let provider = new firebase.auth.GoogleAuthProvider();
+  document.getElementById('login').addEventListener('click', GoogleLogin);
+
+  function GoogleLogin() { //google sign in function
+    firebase.auth().signInWithPopup(provider).then(res => {
+      showPage(res.user)
+    }).catch(e => {
+      console.log(e) 
+    })
+  }
+
+
+  function checkAuthState() { //this function check if the user is authenticated
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        showPage(user)
+      } else {
+        console.log("USER-NOT-AUTH");
+      }
+    })
+  }
+
+  function showPage(user) { //redirection to home
+    location.href = '/home.html';
+  }
+
+</script>
+
+</html>

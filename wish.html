@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Movies Room</title>
+  <link rel="icon" type="image/x-icon" href="/img/logo.jpg">
+  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+</head>
+
+<body>
+  <nav class='nav'>
+    <img id="logo" src="/img/logo.jpg">
+    <div id="right-nav">
+      <p id="username"></p>
+      <p id="email"></p>
+      <input id="wishlist" type="image"
+        src="/img/wishlist.png" />
+      <button id="logout">Logout</button>
+    </div>
+</nav>
+<section id= "sec">
+  <div id="empty" class="hidden">
+    <h2 id="h2_empty" >You did not add any movie to wishlist!</h2>
+    <btn  id="btn_empty">Movies List</btn>
+  </div>
+    <input type="text" id="myInput" placeholder="Search">
+    <table id="myTable" >
+      <tr class="header">
+        <th style="width:25%;">Genre</th>
+        <th style="width:10%;">Id</th>
+        <th style="width:50%;">Title</th>
+        <th style="width:15%;">Year</th>
+      </tr>
+    </table>
+  </section>
+
+</body>
+
+<script src="https://www.gstatic.com/firebasejs/8.1.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.1.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.1.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.1.1/firebase-firestore.js"></script>
+
+<script>
+
+  var firebaseConfig = {
+    apiKey: "AIzaSyBmjnR5hVchZEQ75DrJsI0KtrG-ianI_a4",
+    authDomain: "movies-24f1b.firebaseapp.com",
+    projectId: "movies-24f1b",
+    storageBucket: "movies-24f1b.appspot.com",
+    messagingSenderId: "1029670039620",
+    appId: "1:1029670039620:web:f3b9a267a6ffaf36f80c11"
+  };
+  firebase.initializeApp(firebaseConfig);
+  
+ //
+  checkAuthState();
+  
+  function checkAuthState() { //this function check if the user is authenticated
+    firebase.auth().onAuthStateChanged(function (user) {
+      if (user) {
+    document.querySelector("#email").textContent = user.email;
+    searchbar = document.querySelector('#myInput');
+    btn=document.querySelector('#btn_empty');
+    btn.addEventListener('click', function(){
+      location.href = "/home.html";
+    })
+    searchbar.addEventListener("keyup", search); //search in table function
+    document.querySelector("#logout").addEventListener('click', logoutUser); //logout button
+    document.querySelector("#username").textContent = "Hello, " + user.displayName;    
+    document.querySelector("#wishlist").addEventListener('click', wishlist); //wishlist button
+    document.querySelector("#logo").addEventListener('click', function(){ //logo button to return to home
+      window.location.href = "/home.html"
+    });
+
+        firebase
+        .firestore()
+        .collection(user.email) //selecting the wishlist collection of the user by its email which is unique
+          .get().then((querySnapshot) => {
+            querySnapshot.forEach((doc) => {  
+                genre = doc.data().genre;
+                id = doc.data().id;      
+                title = doc.data().title;
+                year = doc.data().year;
+                tableBuilding(genre, id, title, year);
+            });
+          });
+      table = document.querySelector("#myTable");
+       if(table.childElementCount < 2){
+         table.classList.add('hidden');
+         searchbar = document.querySelector('#myInput');
+         searchbar.classList.add('hidden');
+         div = document.querySelector("#empty");
+         div.classList.remove('hidden');
+         document.getElementById("h2_empty").classList.remove('hidden');
+        document.getElementById("btn_empty").classList.remove('hidden');
+       }
+      }
+      else {
+        location.href = 'index.html';
+      }
+    });
+  }
+
+//Creating table row by row
+function tableBuilding(genre_, id_, title_, year_){
+    tr = document.createElement('tr');
+    genre = document.createElement('td');
+    id = document.createElement('td');
+    title = document.createElement('td');
+    year = document.createElement('td');
+    wish = document.createElement('td');
+    genre.textContent = genre_;
+    id.textContent = id_;
+    tr.setAttribute('id', id_); //inserting an id = to the id of the film 
+    title.textContent = title_;
+    year.textContent = year_;
+    wish.innerHTML = '<img src="/img/broken.png" alt="" border="3" height="50" width="50" />'
+    wish.classList.add(id_); //inserting a class = to the id of the film
+    wish.addEventListener('click', removeFromWishlist);
+
+    tr.appendChild(genre);
+    tr.appendChild(id);
+    tr.appendChild(title);
+    tr.appendChild(year);
+    tr.appendChild(wish);
+    table = document.querySelector('#myTable');
+    if(table.className == 'hidden'){
+      table.classList.remove('hidden');
+      empty= document.getElementById("empty");
+      if(empty.className != 'hidden')
+      {
+        empty.classList.add('hidden');
+        document.getElementById("h2_empty").classList.add('hidden');
+        document.getElementById("btn_empty").classList.add('hidden');
+      }
+    }
+    table.appendChild(tr);
+    
+}
+
+
+  
+ function removeFromWishlist(event)
+ {
+    x = event.currentTarget.className;
+    row = document.getElementById(x);
+   // row.classList.add('hidden');   //hide row from the table
+   
+    const email = document.querySelector("#email").textContent;
+
+    firebase.firestore()
+        .collection(email) //selecting the wishlist collection of the user by its email which is unique
+          .get().then((querySnapshot) => {
+            querySnapshot.forEach((doc) => {            
+             if(doc.data().id == x){    
+                doc.ref.delete();  //select and delete the row through id
+                
+             }  
+            });
+          });
+    row.remove(); //remove row
+    table = document.querySelector("#myTable");
+    if(table.childElementCount < 2){
+         table.classList.add('hidden');
+         searchbar = document.querySelector('#myInput');
+         searchbar.classList.add('hidden');
+         div = document.querySelector("#empty");
+         div.classList.remove('hidden');
+         document.getElementById("h2_empty").classList.remove('hidden');
+        document.getElementById("btn_empty").classList.remove('hidden');
+       }
+ }
+
+ function search(event) { //simple table searching, the filtering indexes are all the columns values
+
+let input, filter, table, tr, td;
+input = document.getElementById("myInput");
+filter = input.value.toUpperCase();
+table = document.getElementById("myTable");
+tr = table.getElementsByTagName("tr");
+
+for (let i = 0; i < tr.length; i++) {
+  let found = false;
+  td = tr[i].getElementsByTagName("td");
+  for (j = 0; j < td.length; j++) {
+    if (td[j].textContent.toUpperCase().indexOf(filter) > -1) {
+
+      found = true;
+    }
+  }
+  if (found) {
+    tr[i].style.display = "";
+  } else {
+    tr[i].style.display = "none";
+  }
+}
+}
+
+function wishlist(){ //button wishlist to return to home
+    location.href = "/home.html"
+}
+
+  function logoutUser() { //logout function
+    firebase.auth().signOut().then(() => {
+      location.href = 'index.html';  //redirect to index.html login page
+    }).catch(e => {
+      console.log(e) 
+    })
+  }
+</script>
+
+</html>
